@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROCOIN Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background-color: #121212;
+      color: #e0e0e0;
+    }
+    .banner {
+      background-color: #1e88e5;
+      color: white;
+      width: 100%;
+      padding: 15px 0;
+      text-align: center;
+      font-size: 36px; /* Larger font size for the navbar */
+      font-weight: bold;
+    }
+    .subheader {
+      margin: 20px 0;
+      font-size: 24px;
+      color: #e0e0e0;
+    }
+    .container {
+      display: flex;
+      max-width: 1200px;
+      margin: 20px auto;
+      align-items: flex-start;
+    }
+    .table-container {
+      margin-right: 20px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 220px;
+      background-color: #1e1e1e;
+    }
+    table, th, td {
+      border: 1px solid #444;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+      font-size: 18px; /* Increase table font size */
+    }
+    th {
+      background-color: #333;
+      color: #fff;
+    }
+    canvas {
+      flex: 1;
+    }
+    .chart-container {
+      width: 800px;
+      height: 400px;
+    }
+  </style>
+  <script>
+    // Seeded random function
+    function seededRandom(seed) {
+      let value = seed;
+      return function () {
+        value = (value * 9301 + 49297) % 233280;
+        return value / 233280;
+      };
+    }
+
+    const seed = "roccocoin";
+    const random = seededRandom(
+      Array.from(seed).reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    );
+
+    let chartData = [];
+
+    // Generate initial candlestick data
+    function generateCandlestickData() {
+      const now = new Date();
+      const data = [];
+      for (let i = 59; i >= 0; i--) {
+        const time = new Date(now.getTime() - i * 1000);
+        const open = random() * 100;
+        const close = random() * 100;
+        const high = Math.max(open, close) + random() * 10;
+        const low = Math.min(open, close) - random() * 10;
+
+        data.push({
+          x: time,
+          o: open.toFixed(2),
+          h: high.toFixed(2),
+          l: low.toFixed(2),
+          c: close.toFixed(2),
+        });
+      }
+      chartData = data;
+      return data;
+    }
+
+    // Calculate averages
+    function calculateAverages() {
+      const last10 = chartData.slice(-10).map((d) => parseFloat(d.c));
+      const last60 = chartData.map((d) => parseFloat(d.c));
+      const avg10 = last10.reduce((sum, val) => sum + val, 0) / last10.length;
+      const avg60 = last60.reduce((sum, val) => sum + val, 0) / last60.length;
+      return { avg10, avg60 };
+    }
+
+    // Update the chart with new data
+    function updateChart(chart) {
+      const currentTime = new Date();
+      const open = random() * 100;
+      const close = random() * 100;
+      const high = Math.max(open, close) + random() * 10;
+      const low = Math.min(open, close) - random() * 10;
+
+      // Add the new candlestick data
+      const newData = {
+        x: currentTime,
+        o: open.toFixed(2),
+        h: high.toFixed(2),
+        l: low.toFixed(2),
+        c: close.toFixed(2),
+      };
+      chart.data.datasets[0].data.push(newData);
+
+      // Remove the oldest data point to keep 60 points
+      chart.data.datasets[0].data.shift();
+      chart.update();
+
+      // Update chart data
+      chartData.push(newData);
+      chartData.shift();
+
+      // Update table and current AUD value
+      updateTable();
+      updateAUDValue();
+    }
+
+    function updateAUDValue() {
+      const currentAUD = chartData[chartData.length - 1].c;
+      document.getElementById("current-aud").textContent = `Current AUD Value: $${currentAUD}`;
+    }
+
+    function updateTable() {
+      const averages = calculateAverages();
+      document.getElementById("avg10").textContent = `$${averages.avg10.toFixed(2)}`;
+      document.getElementById("avg60").textContent = `$${averages.avg60.toFixed(2)}`;
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const ctx = document.getElementById("chart").getContext("2d");
+
+      const chart = new Chart(ctx, {
+        type: "candlestick",
+        data: {
+          datasets: [
+            {
+              label: "RoccoCoin Prices",
+              data: generateCandlestickData(),
+              borderColor: "rgba(75, 192, 192, 1)",
+              borderWidth: 1,
+              barThickness: 6, // Adjust thickness for better spacing
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              type: "time",
+              time: {
+                unit: "second",
+              },
+              title: {
+                display: true,
+                text: "Time",
+                color: "#e0e0e0",
+              },
+              ticks: {
+                color: "#e0e0e0",
+              },
+            },
+            y: {
+              title: {
+                display: true,
+                text: "Price ($)",
+                color: "#e0e0e0",
+              },
+              ticks: {
+                color: "#e0e0e0",
+              },
+            },
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: "#e0e0e0",
+              },
+            },
+          },
+        },
+      });
+
+      updateAUDValue();
+      updateTable();
+
+      setInterval(() => updateChart(chart), 1000);
+    });
+  </script>
+</head>
+<body>
+  <div class="banner">ROCOIN</div>
+  <div class="subheader" id="current-aud">Current AUD Value: $0.00</div>
+  <div class="container">
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Last 10s Avg</td>
+            <td id="avg10">$0.00</td>
+          </tr>
+          <tr>
+            <td>Last 60s Avg</td>
+            <td id="avg60">$0.00</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="chart-container">
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+</body>
+</html>
